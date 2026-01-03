@@ -20,6 +20,13 @@ const AGING_FACTOR = 2; // +2 points per minute of waiting
 // Helper now imported from pathways.js
 // const getPathwayForESI ... removed
 
+// Multi-Room Configuration
+const STATION_SUB_ROOMS = {
+    'vision_test': ['A', 'B', 'C'],
+    'refraction': ['A', 'B', 'C'],
+    'doctor_consult': ['A', 'B', 'C']
+};
+
 export const QueueSystem = {
     /**
      * Initialize a patient into the queue system
@@ -50,50 +57,80 @@ export const QueueSystem = {
      * Add patient to a specific station queue
      */
     addToStation: (station, visit) => {
+        let targetQueue = station;
+        let assignedRoom = null;
+
+        // 1. Check if station has sub-rooms
+        if (STATION_SUB_ROOMS[station]) {
+            const rooms = STATION_SUB_ROOMS[station];
+            const queues = db.getQueues();
+
+            // Load Balancing: Find room with shortest queue
+            let minLength = Infinity;
+            let bestRoom = rooms[0];
+
+            rooms.forEach(room => {
+                const subQueueName = `${station}_${room}`;
+                const length = (queues[subQueueName] || []).length;
+                if (length < minLength) {
+                    minLength = length;
+                    bestRoom = room;
+                }
+            });
+
+            assignedRoom = bestRoom;
+            targetQueue = `${station}_${assignedRoom}`;
+            visit.assignedRoom = assignedRoom; // Persist assignment
+            console.log(`[QueueSystem] Load Balancing: Assigned ${visit.tokenId} to ${targetQueue}`);
+        } else {
+            visit.assignedRoom = null; // Reset if moving to single-room station
+        }
+
         const queueItem = {
             tokenId: visit.tokenId,
             name: visit.patientId, // or name lookup
             esiLevel: visit.esiLevel || 3,
             entryTime: Date.now(),
-            baseScore: ESI_WEIGHTS[visit.esiLevel || 3] || 100
+            baseScore: ESI_WEIGHTS[visit.esiLevel || 3] || 100,
+            assignedRoom: assignedRoom
         };
-        db.addToQueue(station, queueItem,visit.esiLevel);
+        db.addToQueue(targetQueue, queueItem, visit.esiLevel);
     },
 
     /**
      * Get sorted list for a station (The Display Logic)
      */
-getStationQueue: (station) => {
-    const queues = db.getQueues();
-    const rawList = queues[station] || [];
+    getStationQueue: (station) => {
+        const queues = db.getQueues();
+        const rawList = queues[station] || [];
 
-    if (rawList.length <= 1) return rawList;
+        if (rawList.length <= 1) return rawList;
 
-    const now = Date.now();
+        const now = Date.now();
 
-    // Enrich with scores
-    const scoredList = rawList.map(item => {
-        const waitMinutes = (now - item.entryTime) / 60000;
-        const agingScore = waitMinutes * AGING_FACTOR;
-        const totalScore = item.baseScore + agingScore;
+        // Enrich with scores
+        const scoredList = rawList.map(item => {
+            const waitMinutes = (now - item.entryTime) / 60000;
+            const agingScore = waitMinutes * AGING_FACTOR;
+            const totalScore = item.baseScore + agingScore;
 
-        return {
-            ...item,
-            waitMinutes: Math.floor(waitMinutes),
-            totalScore
-        };
-    });
+            return {
+                ...item,
+                waitMinutes: Math.floor(waitMinutes),
+                totalScore
+            };
+        });
 
-    // 🟢 Keep first patient fixed
-    const firstPatient = scoredList[0];
+        // 🟢 Keep first patient fixed
+        const firstPatient = scoredList[0];
 
-    // 🔄 Sort the rest
-    const restPatients = scoredList
-        .slice(1)
-        .sort((a, b) => b.totalScore - a.totalScore);
+        // 🔄 Sort the rest
+        const restPatients = scoredList
+            .slice(1)
+            .sort((a, b) => b.totalScore - a.totalScore);
 
-    return rawList;
-},
+        return [firstPatient, ...restPatients];
+    },
 
 
     /**
@@ -121,6 +158,14 @@ getStationQueue: (station) => {
         if (currentIndex === -1 || currentIndex >= visit.pathway.length - 1) {
             console.log(`[QueueSystem] End of line or invalid index`);
             visit.stationStatus = 'completed';
+
+            // Clean up last queue
+            let sourceQueue = visit.currentStation;
+            if (visit.assignedRoom) {
+                sourceQueue = `${visit.currentStation}_${visit.assignedRoom}`;
+            }
+            db.removeFromQueue(sourceQueue, tokenId);
+
             return { next: null, message: "Journey Completed" };
         }
 
@@ -128,7 +173,15 @@ getStationQueue: (station) => {
         console.log(`[QueueSystem] Next Station: ${nextStation}`);
 
         // 🟢 Remove from current station queue (Fix for duplication)
-        db.removeFromQueue(visit.currentStation, tokenId);
+        // Handle Multi-Room Removal
+        let sourceQueue = visit.currentStation;
+        if (visit.assignedRoom) {
+            sourceQueue = `${visit.currentStation}_${visit.assignedRoom}`;
+        }
+        db.removeFromQueue(sourceQueue, tokenId);
+
+        // Reset assigned room for next station (will be re-calculated in addToStation)
+        visit.assignedRoom = null;
 
         // Move to next
         visit.currentStation = nextStation;
@@ -143,45 +196,46 @@ getStationQueue: (station) => {
         return { next: nextStation };
     },
 
-  getPatientStatus: (tokenId) => {
-    const visit = db.getVisit(tokenId);
-    if (!visit) return null;
+    getPatientStatus: (tokenId) => {
+        const visit = db.getVisit(tokenId);
+        if (!visit) return null;
 
-    const station = visit.currentStation;
-    let position = 0;
-    let estimatedWait = 0;
+        const station = visit.currentStation;
+        let position = 0;
+        let estimatedWait = 0;
 
-    const queues = db.getQueues();
-    const queue = queues[station] || [];
+        const queues = db.getQueues();
+        const queue = queues[station] || [];
 
-    const now = Date.now();
+        const now = Date.now();
 
-    const sortedQueue = [...queue]
-        .map(item => {
-            const waitMinutes = (now - item.entryTime) / 60000;
-            const agingScore = waitMinutes * AGING_FACTOR;
-            const totalScore = item.baseScore + agingScore;
-            return { ...item, totalScore };
-        })
-        .sort((a, b) => b.totalScore - a.totalScore);
+        const sortedQueue = [...queue]
+            .map(item => {
+                const waitMinutes = (now - item.entryTime) / 60000;
+                const agingScore = waitMinutes * AGING_FACTOR;
+                const totalScore = item.baseScore + agingScore;
+                return { ...item, totalScore };
+            })
+            .sort((a, b) => b.totalScore - a.totalScore);
 
-    const index = sortedQueue.findIndex(p => p.tokenId === tokenId);
+        const index = sortedQueue.findIndex(p => p.tokenId === tokenId);
 
-    if (index !== -1) {
-        position = index + 1;
-        estimatedWait = position * 5; // 5 min heuristic
-    }
+        if (index !== -1) {
+            position = index + 1;
+            estimatedWait = position * 5; // 5 min heuristic
+        }
 
-    return {
-        tokenId,
-        name: visit.name || "Guest",
-        currentStation: station,
-        pathway: visit.pathway,
-        queuePosition: position,
-        estimatedWait,
-        esiLevel: visit.esiLevel,
-        status: visit.stationStatus
-    };
-}
-
+        return {
+            tokenId,
+            name: visit.name || "Guest",
+            currentStation: station,
+            pathway: visit.pathway,
+            queuePosition: position,
+            estimatedWait,
+            esiLevel: visit.esiLevel,
+            status: visit.stationStatus
+        };
+    },
+    STATION_SUB_ROOMS // Export for API usage
 };
+

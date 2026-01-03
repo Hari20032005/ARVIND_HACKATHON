@@ -36,11 +36,23 @@ if (!global.appDb) {
         patients: loadPatients(),
         visits: [],
         stationQueues: {
+            // Multi-room Stations
+            vision_test_A: [], vision_test_B: [], vision_test_C: [],
+            refraction_A: [], refraction_B: [], refraction_C: [],
+            doctor_consult_A: [], doctor_consult_B: [], doctor_consult_C: [],
+
+            // Single room stations
             registration: [],
-            vision_test: [],
-            iop_check: [],
+            vision_test: [], // Keep for backward compat/safety
+            refraction: [],
             doctor_consult: [],
-            emergency_room: [],
+
+            iop_check: [],
+            dilation: [],
+            fundus_photo: [],
+            investigation: [],
+            emergency_room: [], // legacy name
+            trauma_center: [],
             pharmacy: []
         },
         emrRecords: []
@@ -90,37 +102,39 @@ export const db = {
     // Queue Management
     getQueues: () => state.stationQueues,
     addToQueue: (station, patient, esiLevel) => {
-    if (!state.stationQueues[station]) {
-        state.stationQueues[station] = [];
-    }
-
-    const queue = state.stationQueues[station];
-
-    // 🟥 Emergency case
-    if (esiLevel === 1) {
-        // If only 0 or 1 patient, safe to push
-        if (queue.length <= 1) {
-            queue.push(patient);
-            return;
+        if (!state.stationQueues[station]) {
+            state.stationQueues[station] = [];
         }
 
-        // Find insertion index starting AFTER index 0
-        let insertIndex = 1;
+        const queue = state.stationQueues[station];
 
-        for (let i = 1; i < queue.length; i++) {
-            // If existing patient has >= priority score
-            if (queue[i].esiLevel >= esiLevel) {
-                insertIndex = i + 1;
+        // 🟥 Emergency case
+        if (esiLevel === 1) {
+            // If only 0 or 1 patient, safe to push
+            if (queue.length <= 1) {
+                queue.push(patient);
+                return;
             }
-        }
 
-        queue.splice(insertIndex, 0, patient);
-    } 
-    else {
-        // Normal case
-        queue.push(patient);
-    }
-},
+            // Find insertion index starting AFTER index 0
+            let insertIndex = queue.length; // Default to end
+
+            for (let i = 1; i < queue.length; i++) {
+                // Find first person with LOWER priority (Higher ESI)
+                // e.g. if we see ESI 3, and we are ESI 1, we insert HERE (before the 3).
+                if (queue[i].esiLevel > esiLevel) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+
+            queue.splice(insertIndex, 0, patient);
+        }
+        else {
+            // Normal case
+            queue.push(patient);
+        }
+    },
 
 
     removeFromQueue: (station, tokenId) => {
