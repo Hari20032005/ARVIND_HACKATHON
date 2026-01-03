@@ -13,7 +13,7 @@ export const STATIONS = {
     // IOP Removed
     DOCTOR: 'doctor_consult',
     EMERGENCY: 'trauma_center',
-    PHARMACY: 'pharmacy'
+    PHARMACY: ''
     // DISCHARGE Removed
 };
 
@@ -67,6 +67,13 @@ export const COMPLAINT_PATHWAYS = {
         STATIONS.DOCTOR,
         STATIONS.PHARMACY
     ],
+     'BLURRED_VISION_2': [
+        STATIONS.VISION,
+        STATIONS.REFRACTION,
+        STATIONS.INVESTIGATION,
+        STATIONS.DILATION,
+        STATIONS.DOCTOR
+    ],
     // 3. Pain
     'PAIN': [
         STATIONS.VISION,
@@ -88,6 +95,7 @@ export const COMPLAINT_PATHWAYS = {
       
         STATIONS.VISION,
         STATIONS.DOCTOR,
+        STATIONS.PHARMACY
         
     ],
     // 6. Routine Checkup
@@ -95,6 +103,13 @@ export const COMPLAINT_PATHWAYS = {
         STATIONS.VISION,
         STATIONS.REFRACTION,
         STATIONS.FUNDUS,
+        STATIONS.DOCTOR,
+        STATIONS.PHARMACY
+    ],
+     'ROUTINE_2': [
+        STATIONS.VISION,
+        STATIONS.REFRACTION,
+        STATIONS.INVESTIGATION,
         STATIONS.DOCTOR,
         STATIONS.PHARMACY
     ]

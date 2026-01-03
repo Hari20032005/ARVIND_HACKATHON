@@ -89,10 +89,40 @@ export const db = {
 
     // Queue Management
     getQueues: () => state.stationQueues,
-    addToQueue: (station, patient) => {
-        if (!state.stationQueues[station]) state.stationQueues[station] = [];
-        state.stationQueues[station].push(patient);
-    },
+    addToQueue: (station, patient, esiLevel) => {
+    if (!state.stationQueues[station]) {
+        state.stationQueues[station] = [];
+    }
+
+    const queue = state.stationQueues[station];
+
+    // 🟥 Emergency case
+    if (esiLevel === 1) {
+        // If only 0 or 1 patient, safe to push
+        if (queue.length <= 1) {
+            queue.push(patient);
+            return;
+        }
+
+        // Find insertion index starting AFTER index 0
+        let insertIndex = 1;
+
+        for (let i = 1; i < queue.length; i++) {
+            // If existing patient has >= priority score
+            if (queue[i].esiLevel >= esiLevel) {
+                insertIndex = i + 1;
+            }
+        }
+
+        queue.splice(insertIndex, 0, patient);
+    } 
+    else {
+        // Normal case
+        queue.push(patient);
+    }
+},
+
+
     removeFromQueue: (station, tokenId) => {
         if (!state.stationQueues[station]) return;
         state.stationQueues[station] = state.stationQueues[station].filter(p => p.tokenId !== tokenId);

@@ -57,7 +57,7 @@ export const QueueSystem = {
             entryTime: Date.now(),
             baseScore: ESI_WEIGHTS[visit.esiLevel || 3] || 100
         };
-        db.addToQueue(station, queueItem);
+        db.addToQueue(station, queueItem,visit.esiLevel);
     },
 
     /**
@@ -92,7 +92,7 @@ getStationQueue: (station) => {
         .slice(1)
         .sort((a, b) => b.totalScore - a.totalScore);
 
-    return [firstPatient, ...restPatients];
+    return rawList;
 },
 
 
