@@ -102,9 +102,44 @@ export const COMPLAINT_PATHWAYS = {
 
 export function getPathwayForESI(esiLevel, category) {
     // 1. Check for Specific Category Match First
-    if (category && COMPLAINT_PATHWAYS[category]) {
-        return COMPLAINT_PATHWAYS[category];
+    console.log(category)
+    let cat=null
+    if(category=="Gradual Vision Loss"){
+     cat="BLURRED_VISION"
+    }
+    else if(category=="Eye Pain (Undifferentiated)"){
+      cat="PAIN"
+    }
+    else if(category=="Red Eye (Stable)"){
+        cat="REDNESS"
+    }
+    else if(category=="Refraction / Vision Check"){
+        cat="ROUTINE"
+    }
+    if (cat && COMPLAINT_PATHWAYS[cat]) {
+        return COMPLAINT_PATHWAYS[cat];
     }
     // 2. Fallback to ESI Level
     return PATHWAYS[esiLevel] || PATHWAYS[3];
 }
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 

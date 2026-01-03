@@ -80,6 +80,9 @@ async function sendSMS() {
     };
     initEdgeAi();
   }, [complaint]);
+  useEffect(()=>{
+    console.log(mappedComplaint)
+  },[mappedComplaint])
 
   useEffect(() => {
     if (complaint) {
@@ -137,7 +140,7 @@ async function sendSMS() {
       // Innovation: Digital Token Generation
       // Instead of just routing, we show the ticket first.
       const selectedEsi = mappedComplaint.esiLevel || 3;
-      const selectedCategory = mappedComplaint.category;
+      const selectedCategory = mappedComplaint.complaint;
 
       const journey = getPathwayForESI(selectedEsi, selectedCategory);
 
