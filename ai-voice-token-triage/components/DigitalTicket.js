@@ -33,8 +33,8 @@ export default function DigitalTicket({ tokenData }) {
         const generateQR = async () => {
             try {
                 // Generate Full URL for Patient Companion App
-                // Using detected LAN IP to allow mobile scanning
-                const baseUrl = "http://10.196.237.96:3000";
+                // Using ngrok public URL for mobile access
+                const baseUrl = "https://297371881447.ngrok-free.app";
                 const qrUrl = `${baseUrl}/patient/${tokenData.tokenId}`;
 
                 const qr = await QRCode.toDataURL(qrUrl, {
@@ -90,7 +90,7 @@ export default function DigitalTicket({ tokenData }) {
 
                 <div className="text-center">
                     <p className="text-xs text-slate-400 mb-1">Estimated Wait Time</p>
-                    <p className="text-2xl font-bold text-slate-700">{tokenData.waitTime} mins</p>
+                    <p className="text-2xl font-bold text-slate-700">{tokenData.estimatedWaitTime} mins</p>
                 </div>
             </div>
 

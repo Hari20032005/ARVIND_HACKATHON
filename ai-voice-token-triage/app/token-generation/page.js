@@ -10,7 +10,7 @@ export default function TokenGeneration() {
   const searchParams = useSearchParams();
   const category = searchParams.get('category');
   const complaint = decodeURIComponent(searchParams.get('complaint') || '');
-  
+
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,8 +20,21 @@ export default function TokenGeneration() {
   useEffect(() => {
     if (category && complaint) {
       // Generate a mock token with the required information
-      setTimeout(() => {
+      // Generate a mock token with the required information
+      setTimeout(async () => {
         try {
+          // 🚀 Fetch Smart Wait Estimate
+          let smartWaitTime = 40;
+          try {
+            // We can't easily pass ESI here without full logic, but we can pass category
+            // The API defaults to ESI 3 if not provided
+            const res = await fetch(`/api/queue/estimate?category=${encodeURIComponent(category)}`);
+            const data = await res.json();
+            if (data.totalMinutes) smartWaitTime = data.totalMinutes;
+          } catch (e) {
+            console.error("Estimate fetch failed", e);
+          }
+
           const newToken = {
             id: `A-${Math.floor(100 + Math.random() * 900)}`, // Format: A-101 to A-999
             complaint: complaint,
@@ -30,12 +43,12 @@ export default function TokenGeneration() {
             stationList: getStationsForCategory(category),
             timestamp: new Date().toISOString(),
             queuePosition: Math.floor(Math.random() * 20) + 1, // Random position between 1-20
-            estimatedWaitTime: calculateWaitTime(category)
+            estimatedWaitTime: smartWaitTime
           };
-          
+
           setToken(newToken);
           setMobileUrl(`${window.location.origin}/mobile-token/${newToken.id}`);
-          
+
           // Sync to EMR after token generation
           syncToEMR(newToken);
           playSuccessTone(); // Play success sound
@@ -43,6 +56,7 @@ export default function TokenGeneration() {
         } catch (err) {
           setError('Error generating token');
           playErrorTone(); // Play error sound
+          console.error(err);
           setLoading(false);
         }
       }, 2000);
@@ -54,7 +68,7 @@ export default function TokenGeneration() {
   // Sync token data to EMR
   const syncToEMR = async (tokenData) => {
     setEmrSyncStatus('syncing');
-    
+
     try {
       const response = await fetch('/api/emr', {
         method: 'POST',
@@ -66,9 +80,9 @@ export default function TokenGeneration() {
           data: tokenData
         })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         setEmrSyncStatus('success');
         playSuccessTone(); // Play success sound for EMR sync
@@ -122,7 +136,7 @@ export default function TokenGeneration() {
         { id: 3, name: "Doctor Consultation", completed: false, current: false }
       ]
     };
-    
+
     return routes[cat] || routes["GENERAL"];
   };
 
@@ -135,7 +149,7 @@ export default function TokenGeneration() {
       "EMERGENCY": 15,
       "GENERAL": 40
     };
-    
+
     return timeEstimates[cat] || 40; // Default to 40 minutes
   };
 
@@ -148,7 +162,7 @@ export default function TokenGeneration() {
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-gray-700">Missing required information</p>
-          <button 
+          <button
             onClick={() => router.push('/routing')}
             className="mt-4 bg-primary-500 hover:bg-primary-600 text-white font-bold py-2 px-6 rounded-full"
           >
@@ -166,7 +180,7 @@ export default function TokenGeneration() {
           Your Token
         </h1>
         <p className="text-lg text-center text-gray-600 mb-8">Please proceed to the appropriate station</p>
-        
+
         {loading ? (
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mb-4"></div>
@@ -183,7 +197,7 @@ export default function TokenGeneration() {
               <div className="text-8xl font-bold text-blue-700 mb-4">
                 {token.id}
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                   <p className="text-sm text-gray-600 font-medium">Complaint:</p>
@@ -206,9 +220,9 @@ export default function TokenGeneration() {
 
             {/* QR Code */}
             <div className="flex flex-col items-center my-8 p-4 bg-white rounded-lg border-2 border-blue-500">
-              <QRCodeCanvas 
-                value={mobileUrl} 
-                size={180} 
+              <QRCodeCanvas
+                value={mobileUrl}
+                size={180}
                 bgColor="#ffffff"
                 fgColor="#0259d2"
                 level="H"
@@ -223,16 +237,15 @@ export default function TokenGeneration() {
               <div className="relative">
                 {/* Timeline line */}
                 <div className="absolute left-4 top-0 h-full w-1 bg-gradient-to-b from-blue-500 to-blue-300 transform translate-x-1/2"></div>
-                
+
                 {/* Station steps */}
                 {token.stationList.map((station, index) => (
-                  <div key={station.id} className="relative" style={{marginLeft: '2rem'}}>
+                  <div key={station.id} className="relative" style={{ marginLeft: '2rem' }}>
                     {/* Station circle */}
-                    <div className={`absolute left-0 top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center ${
-                      station.current ? 'bg-blue-500 text-white' : 
-                      station.completed ? 'bg-green-500 text-white' : 
-                      'bg-gray-300 text-gray-700'
-                    }`}>
+                    <div className={`absolute left-0 top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center ${station.current ? 'bg-blue-500 text-white' :
+                        station.completed ? 'bg-green-500 text-white' :
+                          'bg-gray-300 text-gray-700'
+                      }`}>
                       {station.current ? (
                         <span className="font-bold">{index + 1}</span>
                       ) : station.completed ? (
@@ -241,18 +254,16 @@ export default function TokenGeneration() {
                         <span className="font-bold">{index + 1}</span>
                       )}
                     </div>
-                    
+
                     {/* Station info */}
-                    <div className={`p-4 rounded-lg ml-14 ${
-                      station.current ? 'bg-blue-50 border border-blue-200' : 
-                      station.completed ? 'bg-green-50 border border-green-200' : 
-                      'bg-gray-50 border border-gray-200'
-                    }`}>
-                      <h3 className={`font-semibold ${
-                        station.current ? 'text-blue-700' : 
-                        station.completed ? 'text-green-700' : 
-                        'text-gray-700'
+                    <div className={`p-4 rounded-lg ml-14 ${station.current ? 'bg-blue-50 border border-blue-200' :
+                        station.completed ? 'bg-green-50 border border-green-200' :
+                          'bg-gray-50 border border-gray-200'
                       }`}>
+                      <h3 className={`font-semibold ${station.current ? 'text-blue-700' :
+                          station.completed ? 'text-green-700' :
+                            'text-gray-700'
+                        }`}>
                         {station.name}
                       </h3>
                       {station.current && (
@@ -268,24 +279,22 @@ export default function TokenGeneration() {
             </div>
 
             {/* EMR Sync Status */}
-            <div className={`mt-6 p-4 rounded-lg border flex items-center ${
-              emrSyncStatus === 'pending' ? 'border-gray-300 bg-gray-50' :
-              emrSyncStatus === 'syncing' ? 'border-yellow-300 bg-yellow-50' :
-              emrSyncStatus === 'success' ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
-            }`}>
-              <div className={`w-3 h-3 rounded-full mr-3 ${
-                emrSyncStatus === 'pending' ? 'bg-gray-400' :
-                emrSyncStatus === 'syncing' ? 'bg-yellow-500 animate-pulse' :
-                emrSyncStatus === 'success' ? 'bg-green-500' :
-                'bg-red-500'
-              }`}></div>
+            <div className={`mt-6 p-4 rounded-lg border flex items-center ${emrSyncStatus === 'pending' ? 'border-gray-300 bg-gray-50' :
+                emrSyncStatus === 'syncing' ? 'border-yellow-300 bg-yellow-50' :
+                  emrSyncStatus === 'success' ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+              }`}>
+              <div className={`w-3 h-3 rounded-full mr-3 ${emrSyncStatus === 'pending' ? 'bg-gray-400' :
+                  emrSyncStatus === 'syncing' ? 'bg-yellow-500 animate-pulse' :
+                    emrSyncStatus === 'success' ? 'bg-green-500' :
+                      'bg-red-500'
+                }`}></div>
               <div className="flex-grow">
                 <p className="font-bold text-gray-800">Auroitech – Eyenotes (Mock API)</p>
                 <p className="text-sm">
                   {emrSyncStatus === 'pending' ? 'Preparing to sync...' :
-                   emrSyncStatus === 'syncing' ? 'Syncing to EMR system...' :
-                   emrSyncStatus === 'success' ? 'Successfully synced to EMR' :
-                   'EMR sync failed'}
+                    emrSyncStatus === 'syncing' ? 'Syncing to EMR system...' :
+                      emrSyncStatus === 'success' ? 'Successfully synced to EMR' :
+                        'EMR sync failed'}
                 </p>
               </div>
               {emrSyncStatus === 'syncing' && (

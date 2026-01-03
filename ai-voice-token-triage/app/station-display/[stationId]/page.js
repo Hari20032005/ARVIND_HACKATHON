@@ -108,7 +108,10 @@ export default function StationDisplay() {
                                 }`}></div>
                             <div className="font-bold text-slate-700">{p.tokenId}</div>
                         </div>
-                        <div className="text-xs font-mono text-slate-500">{p.waitMinutes}m</div>
+                        <div className="text-xs text-right">
+                            <span className="block font-bold text-slate-600">~{p.estimatedStationWait}m</span>
+                            <span className="text-[9px] text-slate-400">WAIT</span>
+                        </div>
                     </div>
                 ))}
                 {waitingList.length === 0 && <div className="text-center text-slate-300 text-sm italic py-4">Queue Empty</div>}
@@ -170,7 +173,7 @@ export default function StationDisplay() {
 
                         <div className="mt-8 flex gap-3 justify-center">
                             <span className="px-4 py-2 bg-slate-100 rounded-lg text-sm font-mono">
-                                Waited: {nextPatient.waitMinutes}m
+                                Time in Queue: {nextPatient.waitMinutes}m
                             </span>
                             <span className="px-4 py-2 bg-slate-100 rounded-lg text-sm font-bold tracking-wider">
                                 ESI LEVEL {nextPatient.esiLevel}
@@ -212,7 +215,7 @@ export default function StationDisplay() {
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {waitingList.map((p, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all">
+                        <div className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all">
                             <div className="flex items-center gap-4">
                                 <div className={`w-3 h-12 rounded-full ${p.esiLevel === 1 ? 'bg-red-500' :
                                     p.esiLevel === 2 ? 'bg-orange-400' :
@@ -225,8 +228,8 @@ export default function StationDisplay() {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <div className="font-mono font-bold text-slate-600">{p.waitMinutes} m</div>
-                                <div className="text-[10px] text-slate-400 uppercase">Wait Time</div>
+                                <div className="font-mono font-bold text-slate-600">~{p.estimatedStationWait}m</div>
+                                <div className="text-[10px] text-slate-400 uppercase">Est. Wait</div>
                             </div>
                         </div>
                     ))}

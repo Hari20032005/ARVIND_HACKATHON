@@ -67,7 +67,7 @@ export const COMPLAINT_PATHWAYS = {
         STATIONS.DOCTOR,
         STATIONS.PHARMACY
     ],
-     'BLURRED_VISION_2': [
+    'BLURRED_VISION_2': [
         STATIONS.VISION,
         STATIONS.REFRACTION,
         STATIONS.INVESTIGATION,
@@ -92,11 +92,11 @@ export const COMPLAINT_PATHWAYS = {
     ],
     // 5. Chemical / Trauma
     'TRAUMA': [
-      
+
         STATIONS.VISION,
         STATIONS.DOCTOR,
         STATIONS.PHARMACY
-        
+
     ],
     // 6. Routine Checkup
     'ROUTINE': [
@@ -106,7 +106,7 @@ export const COMPLAINT_PATHWAYS = {
         STATIONS.DOCTOR,
         STATIONS.PHARMACY
     ],
-     'ROUTINE_2': [
+    'ROUTINE_2': [
         STATIONS.VISION,
         STATIONS.REFRACTION,
         STATIONS.INVESTIGATION,
@@ -118,21 +118,21 @@ export const COMPLAINT_PATHWAYS = {
 export function getPathwayForESI(esiLevel, category) {
     // 1. Check for Specific Category Match First
     console.log(category)
-    let cat=null
-    if(category=="Gradual Vision Loss"){
-     cat="BLURRED_VISION"
+    let cat = null
+    if (category == "Gradual Vision Loss") {
+        cat = "BLURRED_VISION"
     }
-    else if(category=="Eye Pain (Undifferentiated)"){
-      cat="PAIN"
+    else if (category == "Eye Pain (Undifferentiated)") {
+        cat = "PAIN"
     }
-    else if(category=="Red Eye (Stable)"){
-        cat="REDNESS"
+    else if (category == "Red Eye (Stable)") {
+        cat = "REDNESS"
     }
-    else if(category=="Refraction / Vision Check"){
-        cat="ROUTINE"
+    else if (category == "Refraction / Vision Check") {
+        cat = "ROUTINE"
     }
-    else if(category=="EMERGENCY"){
-        cat="TRAUMA"
+    else if (category == "EMERGENCY") {
+        cat = "TRAUMA"
     }
     if (cat && COMPLAINT_PATHWAYS[cat]) {
         return COMPLAINT_PATHWAYS[cat];
@@ -145,7 +145,6 @@ export function getPathwayForESI(esiLevel, category) {
 
 
 
-    
 
 
 
@@ -160,4 +159,4 @@ export function getPathwayForESI(esiLevel, category) {
 
 
 
- 
+

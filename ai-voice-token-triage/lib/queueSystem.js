@@ -122,12 +122,20 @@ export const QueueSystem = {
         });
 
         // 🟢 Keep first patient fixed
-        const firstPatient = scoredList[0];
+        const firstPatient = {
+            ...scoredList[0],
+            estimatedStationWait: QueueSystem.STATION_TIMES[station] || 5 // Now Serving typically has avg service time left
+        };
 
         // 🔄 Sort the rest
         const restPatients = scoredList
             .slice(1)
-            .sort((a, b) => b.totalScore - a.totalScore);
+            .sort((a, b) => b.totalScore - a.totalScore)
+            .map((p, index) => ({
+                ...p,
+                // Wait = (My Position + 1) * Service Time
+                estimatedStationWait: (index + 1) * (QueueSystem.STATION_TIMES[station] || 5)
+            }));
 
         return [firstPatient, ...restPatients];
     },
@@ -205,29 +213,80 @@ export const QueueSystem = {
         let estimatedWait = 0;
 
         const queues = db.getQueues();
-        const queue = queues[station] || [];
+
+        // Handle Multi-Room or Single Room queue fetch for current position
+        let currentQueue = [];
+        if (visit.assignedRoom) {
+            currentQueue = queues[`${station}_${visit.assignedRoom}`] || [];
+        } else {
+            currentQueue = queues[station] || [];
+        }
 
         const now = Date.now();
 
-        const sortedQueue = [...queue]
+        const sortedQueue = [...currentQueue]
             .map(item => {
                 const waitMinutes = (now - item.entryTime) / 60000;
                 const agingScore = waitMinutes * AGING_FACTOR;
                 const totalScore = item.baseScore + agingScore;
                 return { ...item, totalScore };
             })
-            .sort((a, b) => b.totalScore - a.totalScore);
+            .sort((a, b) => b.totalScore - a.totalScore); // Descending score
 
+        // Find position
+        // Note: The logic in getStationQueue fixes the 0th index, but here we just need relative position.
+        // If sorting logic matches getStationQueue, index is enough.
         const index = sortedQueue.findIndex(p => p.tokenId === tokenId);
 
         if (index !== -1) {
             position = index + 1;
-            estimatedWait = position * 5; // 5 min heuristic
+
+            // 1. Calculate Wait at CURRENT Station
+            // We use the specific station time.
+            const currentStationTime = QueueSystem.STATION_TIMES[station] || 5;
+            const currentStationWait = position * currentStationTime;
+
+            // 2. Calculate Wait for FUTURE Stations
+            // Get remaining pathway
+            const currentPathIndex = visit.pathway.indexOf(station);
+            let futureWait = 0;
+
+            if (currentPathIndex !== -1 && currentPathIndex < visit.pathway.length - 1) {
+                const remainingPathway = visit.pathway.slice(currentPathIndex + 1);
+                const futureEstimate = QueueSystem.estimateJourneyDuration(remainingPathway);
+                futureWait = futureEstimate.totalMinutes;
+            }
+
+            estimatedWait = currentStationWait + futureWait;
+        }
+
+        // 3. Get Patient Details (Mock/Real)
+        // In a real app, visit.patientId would link to specific patient.
+        // For demo, we might not always have it or it might be "Unknown".
+        // We'll try to fetch or fallback to a consistent mock based on Token ID hash to make it look "real" without full auth.
+        let patientDetails = {};
+        if (visit.patientId && visit.patientId !== "Unknown") {
+            const p = db.getPatient(visit.patientId);
+            if (p) patientDetails = { name: p.name, age: p.age, gender: p.gender, phone: p.phone };
+        } else {
+            // Generate consistent "Fake" data based on Token suffix for demo
+            const idSuffix = parseInt(tokenId.split('-')[1] || "100");
+            const names = ["Ramanathan S", "Meenakshi K", "Senthil Kumar", "Anitha R", "John Doe", "Mohammed A"];
+            patientDetails = {
+                name: names[idSuffix % names.length],
+                age: 20 + (idSuffix % 60),
+                gender: idSuffix % 2 === 0 ? "Male" : "Female",
+                phone: "Unknown"
+            };
         }
 
         return {
             tokenId,
-            name: visit.name || "Guest",
+            name: visit.name || patientDetails.name,
+            age: patientDetails.age,
+            gender: patientDetails.gender,
+            phone: patientDetails.phone,
+            complaint: visit.complaint || "Routine Checkup",
             currentStation: station,
             pathway: visit.pathway,
             queuePosition: position,
@@ -236,6 +295,64 @@ export const QueueSystem = {
             status: visit.stationStatus
         };
     },
-    STATION_SUB_ROOMS // Export for API usage
-};
+    STATION_SUB_ROOMS, // Export for API usage
+    STATION_TIMES: {
+        'vision_test': 5,
+        'refraction': 10,
+        'investigation': 15,
+        'dilation': 20,
+        'fundus_photo': 7,
+        'doctor_consult': 10,
+        'pharmacy': 5,
+        'registration': 2,
+        'trauma_center': 15
+    },
 
+    /**
+     * Calculate Total Estimated Journey Time
+     */
+    estimateJourneyDuration: (pathway) => {
+        let totalMinutes = 0;
+        const details = [];
+        const queues = db.getQueues();
+
+        pathway.forEach(station => {
+            if (!station) return;
+
+            // 1. Get Processing Time
+            const procTime = QueueSystem.STATION_TIMES[station] || 5;
+
+            // 2. Get Queue Length
+            let queueLen = 0;
+            const subRooms = QueueSystem.STATION_SUB_ROOMS[station];
+
+            if (subRooms) {
+                // Multi-Room: Sum all rooms
+                let totalPeople = 0;
+                subRooms.forEach(r => {
+                    totalPeople += (queues[`${station}_${r}`] || []).length;
+                });
+                // Throughput is 3x (approx)
+                // If 10 people total, effectively ~3.3 people ahead in "speed"
+                queueLen = Math.ceil(totalPeople / subRooms.length);
+            } else {
+                // Single Room
+                queueLen = (queues[station] || []).length;
+            }
+
+            // 3. Calc Wait at this station
+            const waitTime = queueLen * procTime;
+
+            totalMinutes += (waitTime + procTime); // Wait + Service
+
+            details.push({
+                station,
+                queueLen,
+                procTime,
+                estimatedWait: waitTime
+            });
+        });
+
+        return { totalMinutes, details };
+    }
+};

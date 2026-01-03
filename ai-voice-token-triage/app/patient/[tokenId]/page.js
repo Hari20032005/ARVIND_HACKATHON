@@ -51,60 +51,82 @@ export default function PatientPortal() {
     const progress = ((currentStepIndex + 1) / totalSteps) * 100;
 
     return (
-        <div className="min-h-screen bg-slate-100 font-sans pb-10">
-            {/* Header */}
-            <div className="bg-sky-600 text-white p-6 rounded-b-[2rem] shadow-lg mb-8">
-                <div className="flex justify-between items-start mb-4">
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight">{tokenId}</h1>
-                        <p className="text-sky-100 text-sm">Patient Token</p>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${status.esiLevel === 1 ? 'bg-red-500 text-white' :
-                        status.esiLevel === 2 ? 'bg-orange-500 text-white' : 'bg-emerald-500 text-white'
-                        }`}>
-                        ESI-{status.esiLevel}
-                    </div>
-                </div>
+        <div className="min-h-screen bg-slate-50 font-sans pb-10">
+            {/* Header Area */}
+            <div className="bg-slate-900 text-white p-6 pt-8 rounded-b-[3rem] shadow-2xl mb-8 relative overflow-hidden">
+                {/* Abstract Background Shapes */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-3xl opacity-20 -mr-16 -mt-16"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500 rounded-full blur-3xl opacity-10 -ml-10 -mb-10"></div>
 
-                {/* Main Status Card */}
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                    <div className="text-sky-100 text-xs uppercase font-bold mb-1">Current Status</div>
-                    <div className="text-2xl font-bold flex items-center gap-2">
-                        {currentInfo.icon} {currentInfo.name}
-                    </div>
-                    <div className="mt-2 flex gap-4 text-sm">
+                <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-6">
                         <div>
-                            <span className="block text-sky-200 text-xs">Queue Position</span>
-                            <span className="font-bold text-xl">{status.queuePosition > 0 ? `#${status.queuePosition}` : 'Now Serving'}</span>
+                            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">Token Number</p>
+                            <h1 className="text-6xl font-black tracking-tighter text-white">{tokenId}</h1>
+                            <div className="mt-2 flex items-center gap-2 text-blue-200">
+                                <span className="font-semibold text-lg">{status.name}</span>
+                                <span className="w-1 h-1 bg-blue-400 rounded-full"></span>
+                                <span className="opacity-75">{status.age}y / {status.gender}</span>
+                            </div>
+                            <div className="inline-block mt-3 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs font-bold text-slate-300 uppercase tracking-wide">
+                                {status.complaint}
+                            </div>
                         </div>
-                        <div>
-                            <span className="block text-sky-200 text-xs">Est. Wait</span>
-                            <span className="font-bold text-xl">{status.estimatedWait}m</span>
+                        <div className={`px-4 py-2 rounded-xl text-center shadow-lg ${status.esiLevel === 1 ? 'bg-red-500 text-white' :
+                            status.esiLevel === 2 ? 'bg-orange-500 text-white' : 'bg-emerald-500 text-white'
+                            }`}>
+                            <div className="text-[10px] font-bold uppercase opacity-80">ESI Level</div>
+                            <div className="text-2xl font-black">{status.esiLevel}</div>
+                        </div>
+                    </div>
+
+                    {/* Main Status High-Contrast Card */}
+                    <div className="bg-white text-slate-900 rounded-2xl p-6 shadow-xl transform translate-y-4">
+                        <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-4">
+                            <span className="text-3xl">{currentInfo.icon}</span>
+                            <div>
+                                <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Current Station</div>
+                                <div className="text-xl font-black leading-tight">{currentInfo.name}</div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-center">
+                                <div className="text-blue-400 text-[10px] font-bold uppercase mb-1">Queue Position</div>
+                                <div className="text-4xl font-black text-blue-600">
+                                    {status.queuePosition > 0 ? `#${status.queuePosition}` : <span className="text-2xl">NOW</span>}
+                                </div>
+                            </div>
+                            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center">
+                                <div className="text-emerald-500 text-[10px] font-bold uppercase mb-1">Est. Wait Time</div>
+                                <div className="text-4xl font-black text-emerald-600">{status.estimatedWait}<span className="text-lg text-emerald-400 ml-1">m</span></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Wayfinding / Action */}
-            <div className="px-6 mb-8">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">Your Next Step</h3>
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-sky-50 rounded-full flex items-center justify-center text-2xl">
-                            📍
+            {/* Wayfinding / Action */}
+            <div className="px-6 mb-10 pt-10">
+                <div className="bg-amber-50 p-6 rounded-2xl border-l-8 border-amber-400 shadow-sm">
+                    <h3 className="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-3">ACTION REQUIRED</h3>
+                    <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-xl shrink-0">
+                            🏃
                         </div>
                         <div>
-                            <div className="text-lg font-bold text-slate-800">Go to {currentInfo.room}</div>
-                            <div className="text-slate-500 text-sm">Follow the <span className="text-sky-600 font-bold">Blue Line</span> on the floor</div>
+                            <div className="text-2xl font-black text-slate-800 leading-none mb-2">Go to {currentInfo.room}</div>
+                            <div className="text-slate-500 font-medium">Follow the <span className="bg-blue-100 text-blue-700 px-1 rounded">Blue Line</span> on the floor</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Uber-style Timeline */}
-            <div className="px-6">
-                <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">Treatment Journey</h3>
-                <div className="relative pl-4 border-l-2 border-slate-200 space-y-8">
+            {/* Journey Timeline */}
+            <div className="px-6 pb-12">
+                <h3 className="text-slate-300 text-xs font-black uppercase tracking-widest mb-6 ml-2">YOUR JOURNEY</h3>
+                <div className="relative pl-4 border-l-2 border-slate-200 space-y-10">
                     {status.pathway.map((step, idx) => {
                         const info = STATION_INFO[step] || { name: step, icon: '📍' };
                         const isCompleted = idx < currentStepIndex;
@@ -112,21 +134,30 @@ export default function PatientPortal() {
                         const isFuture = idx > currentStepIndex;
 
                         return (
-                            <div key={step} className={`relative pl-6 transition-all ${isFuture ? 'opacity-40' : 'opacity-100'}`}>
-                                {/* Dot */}
-                                <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 
-                                    ${isCompleted ? 'bg-emerald-500 border-emerald-500' :
-                                        isCurrent ? 'bg-sky-600 border-sky-600 ring-4 ring-sky-100' :
-                                            'bg-white border-slate-300'}`}>
+                            <div key={step} className={`relative pl-8 transition-all duration-500 ${isFuture ? 'opacity-40 grayscale' : 'opacity-100'}`}>
+                                {/* Timeline Dot */}
+                                <div className={`absolute -left-[11px] top-1 w-5 h-5 rounded-full border-4 shadow-sm z-10 box-content
+                                    ${isCompleted ? 'bg-emerald-500 border-white ring-2 ring-emerald-100' :
+                                        isCurrent ? 'bg-blue-600 border-white ring-4 ring-blue-200 scale-125' :
+                                            'bg-slate-200 border-white'}`}>
                                 </div>
 
-                                <div className="font-bold text-slate-800 text-lg">{info.name}</div>
-                                {isCurrent && (
-                                    <div className="text-sky-600 text-sm font-medium animate-pulse">In Progress...</div>
-                                )}
-                                {isCompleted && (
-                                    <div className="text-emerald-600 text-xs font-bold">Completed</div>
-                                )}
+                                <div className="flex items-center gap-3">
+                                    <div className={`text-xl ${isFuture ? 'opacity-50' : 'opacity-100'}`}>{info.icon}</div>
+                                    <div>
+                                        <div className={`font-bold text-lg leading-tight ${isCurrent ? 'text-slate-900 text-xl' : 'text-slate-700'}`}>
+                                            {info.name}
+                                        </div>
+                                        {isCurrent && (
+                                            <div className="text-blue-600 text-xs font-bold uppercase tracking-wider mt-1 animate-pulse">In Progress</div>
+                                        )}
+                                        {isCompleted && (
+                                            <div className="text-emerald-600 text-xs font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
+                                                <span>✓ Completed</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         );
                     })}
