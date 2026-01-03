@@ -125,36 +125,45 @@ export const QueueSystem = {
         return { next: nextStation };
     },
 
-    getPatientStatus: (tokenId) => {
-        const visit = db.getVisit(tokenId);
-        if (!visit) return null;
+  getPatientStatus: (tokenId) => {
+    const visit = db.getVisit(tokenId);
+    if (!visit) return null;
 
-        const station = visit.currentStation;
-        let position = 0;
-        let estimatedWait = 0;
+    const station = visit.currentStation;
+    let position = 0;
+    let estimatedWait = 0;
 
-        // Find position in the specific station queue
-        const queue = db.getQueue(station) || [];
-        // Note: The queue in DB is not strictly sorted by score until 'getStationQueue' is called.
-        // But 'db.addToQueue' appends.
-        // For accurate position, we should simulate the sort.
-        const sortedQueue = [...queue].sort((a, b) => b.totalScore - a.totalScore); // Descending score
+    const queues = db.getQueues();
+    const queue = queues[station] || [];
 
-        const index = sortedQueue.findIndex(p => p.tokenId === tokenId);
-        if (index !== -1) {
-            position = index + 1; // 1-based
-            estimatedWait = position * 5; // Rough estimate: 5 mins per patient
-        }
+    const now = Date.now();
 
-        return {
-            tokenId,
-            name: visit.name || "Guest",
-            currentStation: station,
-            pathway: visit.pathway,
-            queuePosition: position,
-            estimatedWait,
-            esiLevel: visit.esiLevel,
-            status: visit.stationStatus // 'waiting', 'serving', 'completed'
-        };
+    const sortedQueue = [...queue]
+        .map(item => {
+            const waitMinutes = (now - item.entryTime) / 60000;
+            const agingScore = waitMinutes * AGING_FACTOR;
+            const totalScore = item.baseScore + agingScore;
+            return { ...item, totalScore };
+        })
+        .sort((a, b) => b.totalScore - a.totalScore);
+
+    const index = sortedQueue.findIndex(p => p.tokenId === tokenId);
+
+    if (index !== -1) {
+        position = index + 1;
+        estimatedWait = position * 5; // 5 min heuristic
     }
+
+    return {
+        tokenId,
+        name: visit.name || "Guest",
+        currentStation: station,
+        pathway: visit.pathway,
+        queuePosition: position,
+        estimatedWait,
+        esiLevel: visit.esiLevel,
+        status: visit.stationStatus
+    };
+}
+
 };

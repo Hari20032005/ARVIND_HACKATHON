@@ -12,6 +12,33 @@ import { getPathwayForESI } from '../../lib/pathways'; // Client-safe import
 import DigitalTicket from '../../components/DigitalTicket';
 
 export default function ComplaintMappingPage() {
+
+async function sendSMS() {
+  const patientData = JSON.parse(
+    localStorage.getItem("current_patient")
+  );
+
+  if (!patientData) {
+    console.error("Phone number missing");
+    return;
+  }
+
+  const message = "✅ Your appointment is confirmed at EyeCare Hospital.";
+
+  const res = await fetch("/api/send-whatsapp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      phoneNumber: patientData.phone,
+      message: message,
+    }),
+  });
+
+  const data = await res.json();
+  console.log("WhatsApp response:", data);
+}
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -105,6 +132,7 @@ export default function ComplaintMappingPage() {
   };
 
   const handleNext = () => {
+
     if (mappedComplaint) {
       // Innovation: Digital Token Generation
       // Instead of just routing, we show the ticket first.
@@ -124,6 +152,8 @@ export default function ComplaintMappingPage() {
       setTicketData(newToken);
       setShowTicket(true);
       playSuccessTone();
+      sendSMS();
+
 
       // 1. Enter Patient into Intelligent Queue System
       fetch('/api/queue/start', {

@@ -1,10 +1,12 @@
 // SMS Notification Utility
 export const sendMockSMS = async (phoneNumber, message) => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // In a real application, this would connect to an SMS service like Twilio
-  console.log(`SMS sent to ${phoneNumber}: ${message}`);
+ const res = await fetch("/api/send-whatsapp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ phoneNumber, message }),
+  });
   
   // Return success response
   return {
